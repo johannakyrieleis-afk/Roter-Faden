@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Konzentrationstest - Jugend forscht</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; margin: 16px; color: #111; background:#f5f5f5; }
+    .center { text-align:center; }
+    .hidden { display:none; }
+    header { margin-bottom: 12px; }
+    .card { max-width: 900px; margin: 0 auto 18px; padding: 16px; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); background: #fff; }
+    label { display:block; margin-top:8px; font-weight:600; }
+    input[type="text"], input[type="number"], select { width:100%; padding:8px; margin-top:6px; box-sizing:border-box; }
+    button { padding:10px 16px; margin-top:12px; border: none; background:#1976d2; color:#fff; border-radius:6px; cursor:pointer; font-size:15px; }
+    button.secondary { background:#666; }
+    .images { display:flex; justify-content:center; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-top:12px; }
+    img.testimg { max-width:420px; width:45%; border:2px solid #222; border-radius:6px; }
+    #timer { font-size:18px; margin-top:8px; }
+    .marker { position:absolute; width:22px; height:22px; border-radius:50%; background:rgba(255,0,0,0.9); transform:translate(-50%,-50%); pointer-events:none; box-shadow:0 0 6px rgba(0,0,0,0.3); }
+    .imageWrap { position:relative; display:inline-block; }
+    footer { margin-top:20px; font-size:13px; color:#444; text-align:center; }
+  </style>
+</head>
+<body>
+  <header class="center">
+    <h1>Konzentrationstest (Find the Differences)</h1>
+    <p>Kurzer täglicher Test zur Untersuchung von Konzentration und weiblichem Zyklus</p>
+  </header>
+
+  <!-- WELCOME / REGISTER -->
+  <div id="welcome" class="card center">
+    <h2>Herzlich willkommen</h2>
+    <p>
+      Als erstes möchten wir uns bei Ihnen bedanken, dass Sie sich Zeit nehmen, uns bei unserem Jugend-forscht-Projekt zu helfen.
+      Wir bitten Sie, im Rahmen unserer Forschungen jeden Tag einen kurzen Konzentrationstest auf dieser App zu machen.
+      Dieser Test dient dazu, den Zusammenhang von Konzentration und dem weiblichen Zyklus herauszufinden.
+      Alle Informationen werden anonym und nicht öffentlich gespeichert und dienen nur zu Forschungszwecken.
+      Vielen Dank für Ihre Bereitschaft, uns zu unterstützen!<br><br>
+      <strong>Johanna und Natassja</strong>
+    </p>
+
+    <div style="text-align:left; max-width:560px; margin: 0 auto;">
+      <label for="username">Benutzername</label>
+      <input id="username" type="text" placeholder="z. B. Anna" />
+
+      <label for="age">Alter</label>
+      <input id="age" type="number" min="10" max="120" placeholder="Alter in Jahren" />
+
+      <label for="canMenstruate">Kann menstruieren?</label>
+      <select id="canMenstruate">
+        <option value="">-- auswählen --</option>
+        <option value="Ja">Ja</option>
+        <option value="Nein">Nein</option>
+      </select>
+
+      <button id="btnRegister">Anmelden und zum Test</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div id="home" class="card hidden">
+    <h2>Willkommen zurück!</h2>
+    <p id="homeGreeting"></p>
+
+    <div id="dailyQuestionArea" style="max-width:600px; margin:0 auto; text-align:left;">
+      <label>Haben Sie heute Ihre Periode?</label>
+      <button id="btnPeriodYes">Ja</button>
+      <button id="btnPeriodNo" class="secondary">Nein</button>
+    </div>
+
+    <div style="margin-top:14px;">
+      <button id="startTestBtn">Zum heutigen Test</button>
+    </div>
+  </div>
+
+  <!-- TEST AREA -->
+  <div id="testArea" class="card hidden center">
+    <h3>Finde mindestens 3 Unterschiede (klicke ins rechte Bild)</h3>
+    <div id="timer">Zeit: 0 s</div>
+    <div id="found">Gefundene Unterschiede: 0</div>
+
+    <div class="images">
+      <div class="imageWrap"><img id="leftImg" class="testimg" src="" alt="Links" /></div>
+      <div class="imageWrap" id="rightWrap"><img id="rightImg" class="testimg" src="" alt="Rechts" /></div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <button id="restartBtn" class="secondary">Abbrechen / Zurück</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="resultArea" class="card hidden center">
+    <h3>Test abgeschlossen</h3>
+    <p id="resultMessage"></p>
+    <div><button id="btnAgain">Noch einmal</button></div>
+  </div>
+
+  <footer><small>Die Teilnahme ist freiwillig und anonym. Nur für Forschungszwecke.</small></footer>
+
+<script>
+(() => {
+
+/* --- CONFIG --- */
+const SHEETS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbx21RXDiBXWmE-1fZ3JrVgBLYirc4AzKiMbJiRzlMueTsojjuplnCgiIW6pfLlm4vtsRw/exec";
+
+/* --- ELEMENTS --- */
+const elWelcome = document.getElementById("welcome");
+const elHome = document.getElementById("home");
+const elTest = document.getElementById("testArea");
+const elResult = document.getElementById("resultArea");
+
+const inputName = document.getElementById("username");
+const inputAge = document.getElementById("age");
+const inputCanMen = document.getElementById("canMenstruate");
+const btnRegister = document.getElementById("btnRegister");
+
+const homeGreeting = document.getElementById("homeGreeting");
+const dailyQuestionArea = document.getElementById("dailyQuestionArea");
+const btnPeriodYes = document.getElementById("btnPeriodYes");
+const btnPeriodNo = document.getElementById("btnPeriodNo");
+const startTestBtn = document.getElementById("startTestBtn");
+
+const leftImg = document.getElementById("leftImg");
+const rightImg = document.getElementById("rightImg");
+const rightWrap = document.getElementById("rightWrap");
+const timerEl = document.getElementById("timer");
+const foundEl = document.getElementById("found");
+const restartBtn = document.getElementById("restartBtn");
+
+const resultMessage = document.getElementById("resultMessage");
+const btnAgain = document.getElementById("btnAgain");
+
+/* --- DATA --- */
+// ---------------------------
+// Bildpaare für den Test
+// ---------------------------
+/* --- DATA --- */
+const imagePairs = [
+{ img1: "https://i.ibb.co/4R5J8QGj/1-1.jpg", img2: "https://i.ibb.co/5XnsRXgH/1-2.jpg" },
+{ img1: "https://i.ibb.co/P0f01rJ/2-1.jpg", img2: "https://i.ibb.co/vxL4n8TF/2-2.jpg" },
+{ img1: "https://i.ibb.co/7w8pgCF/3-1.jpg", img2: "https://i.ibb.co/xPKzsPB/3-2.jpg" },
+{ img1: "https://i.ibb.co/hJ55pTgW/4-1.jpg", img2: "https://i.ibb.co/xKmGrnqQ/4-2.jpg" },
+{ img1: "https://i.ibb.co/yBPyMGQb/5-1.jpg", img2: "https://i.ibb.co/LzQHQF0K/5-2.jpg" },
+{ img1: "https://i.ibb.co/cXwRz4Cc/6-1.jpg", img2: "https://i.ibb.co/gFDjHz4P/6-2.jpg" },
+{ img1: "https://i.ibb.co/zH2YmZzJ/7-1.jpg", img2: "https://i.ibb.co/p6xCwbDB/7-2.jpg" },
+{ img1: "https://i.ibb.co/m5hKdsdB/8-1.jpg", img2: "https://i.ibb.co/TVJXqJx/8-2.jpg" },
+{ img1: "https://i.ibb.co/F4GGbVv1/9-1.jpg", img2: "https://i.ibb.co/932XGXTX/9-2.jpg" },
+{ img1: "https://i.ibb.co/SwVkJxBL/10-1.jpg", img2: "https://i.ibb.co/p6rbBPkp/10-2.jpg" },
+{ img1: "https://i.ibb.co/gLsnP3Jd/11-1.jpg", img2: "https://i.ibb.co/67f2nCsg/11-2.jpg" },
+{ img1: "https://i.ibb.co/SDSgxPBX/12-1.jpg", img2: "https://i.ibb.co/ZpcvqPCK/12-2.jpg" },
+{ img1: "https://i.ibb.co/sd0HKDB1/13-1.jpg", img2: "https://i.ibb.co/fzJx9sKk/13-2.jpg" },
+{ img1: "https://i.ibb.co/JWjYN5vG/14-1.jpg", img2: "https://i.ibb.co/TxjXgtDs/14-2.jpg" },
+{ img1: "https://i.ibb.co/vxWy2grP/15-1.jpg", img2: "https://i.ibb.co/0RDYJf20/15-2.jpg" },
+{ img1: "https://i.ibb.co/FqqmsQfp/16-1.jpg", img2: "https://i.ibb.co/zHHBvPbV/16-2.jpg" },
+{ img1: "https://i.ibb.co/d4ZTkQSr/17-1.jpg", img2: "https://i.ibb.co/wZm0WL2b/17-2.jpg" },
+{ img1: "https://i.ibb.co/4ZKmV342/18-1.jpg", img2: "https://i.ibb.co/Zzt45Y4j/18-2.jpg" },
+{ img1: "https://i.ibb.co/QF43RgM8/19-1.jpg", img2: "https://i.ibb.co/6xMwbBx/19-2.jpg" },
+{ img1: "https://i.ibb.co/23qq2KmV/20-1.jpg", img2: "https://i.ibb.co/nsLYb8Zt/20-2.jpg" },
+{ img1: "https://i.ibb.co/hRY2CZbX/21-1.jpg", img2: "https://i.ibb.co/35pbdDrh/21-2.jpg" },
+{ img1: "https://i.ibb.co/0pLM2wzS/22-1.jpg", img2: "https://i.ibb.co/ynNy8ZgP/22-2.jpg" },
+{ img1: "https://i.ibb.co/gbSbvz1B/23-2.jpg", img2: "https://i.ibb.co/jkV2fdbT/25-2.jpg" },
+{ img1: "https://i.ibb.co/LzCGh7rq/24-1.jpg", img2: "https://i.ibb.co/GQybP8Wv/24-2.jpg" },
+{ img1: "https://i.ibb.co/N6D6Rmmb/26-1.jpg", img2: "https://i.ibb.co/G3s1DhSG/26-2.jpg" },
+{ img1: "https://i.ibb.co/Vbv88xL/27-1.jpg", img2: "https://i.ibb.co/s96FZ9qp/27-2.jpg" },
+{ img1: "https://i.ibb.co/Cp3k0qrm/28-1.jpg", img2: "https://i.ibb.co/5WGcxFrw/28-2.jpg" },
+{ img1: "https://i.ibb.co/twhjfRh7/29-1.jpg", img2: "https://i.ibb.co/4RFd4ffJ/29-2.jpg" },
+{ img1: "https://i.ibb.co/XkkJtR2K/30-1.jpg", img2: "https://i.ibb.co/HTGDJJTs/30-2.jpg" },
+{ img1: "https://i.ibb.co/Z6rvBncd/31-1.jpg", img2: "https://i.ibb.co/QFq119N5/32-2.jpg" },
+{ img1: "https://i.ibb.co/Lww0bdQ/33-1.jpg", img2: "https://i.ibb.co/gLD6kmvm/33-2.jpg" },
+{ img1: "https://i.ibb.co/svkkxpBb/34-1.jpg", img2: "https://i.ibb.co/1YRTLyqx/34-2.jpg" },
+{ img1: "https://i.ibb.co/qFkbPwyj/35-1.jpg", img2: "https://i.ibb.co/FbQ6gL5Z/35-2.jpg" },
+{ img1: "https://i.ibb.co/KPXPsjL/36-1.jpg", img2: "https://i.ibb.co/67NJvGJQ/36-2.jpg" },
+{ img1: "https://i.ibb.co/pBsk93Sj/37-1.jpg", img2: "https://i.ibb.co/5WtJWTCS/37-2.jpg" },
+{ img1: "https://i.ibb.co/5WjqK9jS/38-1.jpg", img2: "https://i.ibb.co/67mXyrBD/38-2.jpg" },
+{ img1: "https://i.ibb.co/prW9bFpz/39-1.jpg", img2: "https://i.ibb.co/LX2mnHm5/39-2.jpg" },
+{ img1: "https://i.ibb.co/TD2MK9GN/40-1.jpg", img2: "https://i.ibb.co/7Jcqjx9n/40-2.jpg" }
+];
+let user = {};
+let clicks = 0;
+let clickMarkers = [];
+let timerInterval = null;
+let testStart = null;
+let currentPairIndex = 0;
+
+/* --- UTILS --- */
+function genUserID() { return "U" + Math.random().toString(36).slice(2,10); }
+function show(el){ el.classList.remove("hidden"); }
+function hide(el){ el.classList.add("hidden"); }
+function removeAllMarkers(){ clickMarkers.forEach(m=>m.remove()); clickMarkers=[]; }
+
+/* --- SHEETS --- */
+async function sendToSheet(payload){
+  try {
+    await fetch(SHEETS_WEBAPP_URL, {
+      method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload)
+    });
+  } catch {
+    await fetch(SHEETS_WEBAPP_URL, {
+      method:"POST", mode:"no-cors", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload)
+    });
+  }
+}
+
+/* --- USER MANAGEMENT --- */
+function loadUser(){
+  const data = localStorage.getItem("study_user");
+  if(!data) return false;
+  try { user = JSON.parse(data); return true; } catch { return false; }
+}
+function saveUserLocal(){ localStorage.setItem("study_user", JSON.stringify(user)); }
+
+/* --- REGISTER BUTTON --- */
+btnRegister.addEventListener("click", async () => {
+  const name = inputName.value.trim();
+  const age = inputAge.value.trim();
+  const canMen = inputCanMen.value;
+  if(!name || !age || !canMen){ alert("Bitte alle Felder ausfüllen."); return; }
+
+  user = { userID: genUserID(), username: name, age: age, canMenstruate: canMen };
+  saveUserLocal();
+
+  await sendToSheet({ type:"register", ...user });
+  showHome();
+});
+
+/* --- HOME --- */
+function showHome(){
+  hide(elWelcome); show(elHome);
+  homeGreeting.textContent = `Hallo ${user.username}! Danke, dass Sie teilnehmen.`;
+
+  const today = new Date().toISOString().split('T')[0];
+  const answered = localStorage.getItem("periodAnswered_" + today);
+  if(answered){ hide(dailyQuestionArea); } else { show(dailyQuestionArea); }
+}
+
+/* --- PERIOD ANSWERS --- */
+btnPeriodYes.addEventListener("click", async () => {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem("periodAnswered_" + today, "Ja");
+  await sendToSheet({ type:"daily", userID:user.userID, username:user.username, date:today, period:"Ja" });
+  hide(dailyQuestionArea); alert("Antwort gespeichert!");
+});
+btnPeriodNo.addEventListener("click", async () => {
+  const today = new Date().toISOString().split('T')[0];
+  localStorage.setItem("periodAnswered_" + today, "Nein");
+  await sendToSheet({ type:"daily", userID:user.userID, username:user.username, date:today, period:"Nein" });
+  hide(dailyQuestionArea); alert("Antwort gespeichert!");
+});
+
+/* --- TEST LOGIC --- */
+startTestBtn.addEventListener("click", startTestForToday);
+restartBtn.addEventListener("click", ()=>{ stopTimer(); hide(elTest); show(elHome); });
+btnAgain.addEventListener("click", ()=>{ hide(elResult); show(elHome); });
+
+function startTestForToday(){
+  const day = new Date().getDate();
+  currentPairIndex = (day-1) % imagePairs.length;
+  const pair = imagePairs[currentPairIndex];
+
+ leftImg.src = pair.img1;
+rightImg.src = pair.img2;
+
+  clicks = 0; foundEl.textContent = "Gefundene Unterschiede: 0";
+  removeAllMarkers();
+  hide(elHome); show(elTest);
+  testStart = Date.now();
+  startTimer();
+}
+
+function startTimer(){
+  stopTimer();
+  timerInterval = setInterval(()=>{ 
+    const sec = Math.floor((Date.now()-testStart)/1000);
+    timerEl.textContent = `Zeit: ${sec} s`;
+  }, 250);
+}
+function stopTimer(){ if(timerInterval) clearInterval(timerInterval); }
+
+rightImg.addEventListener("click", e=>{
+  const rect = rightImg.getBoundingClientRect();
+  const x = ((e.clientX - rect.left)/rect.width)*100;
+  const y = ((e.clientY - rect.top)/rect.height)*100;
+  const m = document.createElement("div");
+  m.className="marker"; m.style.left=x+"%"; m.style.top=y+"%";
+  rightWrap.appendChild(m); clickMarkers.push(m);
+  clicks++; foundEl.textContent=`Gefundene Unterschiede: ${clicks}`;
+  if(clicks>=3) finishTest();
+});
+
+async function finishTest(){
+  stopTimer();
+  const totalSec = Math.floor((Date.now()-testStart)/1000);
+  const today = new Date().toISOString().split('T')[0];
+  const period = localStorage.getItem("periodAnswered_"+today) || "";
+  await sendToSheet({ type:"result", userID:user.userID, username:user.username, date:today, testID:currentPairIndex+1, timeSec:totalSec, clicks:clicks, period });
+  hide(elTest); show(elResult);
+  resultMessage.textContent = `Sie haben ${clicks} Unterschiede in ${totalSec} Sekunden gefunden.`;
+  localStorage.setItem("lastTestDate", today);
+}
+
+/* --- BOOT --- */
+if(loadUser()){ showHome(); } else { show(elWelcome); }
+
+})();
+</script>
+</body>
+</html>
